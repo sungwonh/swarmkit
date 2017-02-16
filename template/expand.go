@@ -9,18 +9,19 @@ import (
 )
 
 // ExpandContainerSpec expands templated fields in the runtime using the task
-// state. Templating is all evaluated on the agent-side, before execution.
+// state and the node where it is scheduled to run.
+// Templating is all evaluated on the agent-side, before execution.
 //
 // Note that these are projected only on runtime values, since active task
 // values are typically manipulated in the manager.
-func ExpandContainerSpec(t *api.Task) (*api.ContainerSpec, error) {
+func ExpandContainerSpec(n *api.NodeDescription, t *api.Task) (*api.ContainerSpec, error) {
 	container := t.Spec.GetContainer()
 	if container == nil {
 		return nil, errors.Errorf("task missing ContainerSpec to expand")
 	}
 
 	container = container.Copy()
-	ctx := NewContextFromTask(t)
+	ctx := NewContext(n, t)
 
 	var err error
 	container.Env, err = expandEnv(ctx, container.Env)

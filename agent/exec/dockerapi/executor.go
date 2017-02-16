@@ -11,19 +11,23 @@ import (
 	"github.com/docker/swarmkit/api"
 	"github.com/docker/swarmkit/log"
 	"golang.org/x/net/context"
+	"sync"
 )
 
 type executor struct {
 	client  engineapi.APIClient
 	secrets exec.SecretsManager
+	mutex   sync.Mutex // This mutex protects the following node field
+	node    *api.NodeDescription
 }
 
 // NewExecutor returns an executor from the docker client.
 func NewExecutor(client engineapi.APIClient) exec.Executor {
-	return &executor{
+	var executor = &executor{
 		client:  client,
 		secrets: secrets.NewManager(),
 	}
+	return executor
 }
 
 // Describe returns the underlying node description from the docker client.
@@ -108,6 +112,11 @@ func (e *executor) Describe(ctx context.Context) (*api.NodeDescription, error) {
 		},
 	}
 
+	// Save the node information in the executor field
+	e.mutex.Lock()
+	e.node = description
+	e.mutex.Unlock()
+
 	return description, nil
 }
 
@@ -117,7 +126,11 @@ func (e *executor) Configure(ctx context.Context, node *api.Node) error {
 
 // Controller returns a docker container controller.
 func (e *executor) Controller(t *api.Task) (exec.Controller, error) {
-	ctlr, err := newController(e.client, t, secrets.Restrict(e.secrets, t))
+	// Get the node description from the executor field
+	e.mutex.Lock()
+	nodeDescription := e.node
+	e.mutex.Unlock()
+	ctlr, err := newController(e.client, nodeDescription, t, secrets.Restrict(e.secrets, t))
 	if err != nil {
 		return nil, err
 	}

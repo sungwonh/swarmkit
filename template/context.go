@@ -29,6 +29,10 @@ type Context struct {
 		Platform Platform
 	}
 
+	Engine struct {
+		Labels map[string]string
+	}
+
 	Task struct {
 		ID   string
 		Name string
@@ -58,6 +62,7 @@ func NewContext(n *api.NodeDescription, t *api.Task) (ctx Context) {
 			Architecture: n.Platform.Architecture,
 			OS:           n.Platform.OS,
 		}
+		ctx.Engine.Labels = n.Engine.Labels
 	}
 	ctx.Task.ID = t.ID
 	ctx.Task.Name = naming.Task(t)

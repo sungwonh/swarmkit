@@ -127,6 +127,11 @@ func validateContainerSpec(taskSpec api.TaskSpec) error {
 			OS:           "os",
 			Architecture: "architecture",
 		},
+		Engine: &api.EngineDescription{
+			Labels: map[string]string{
+				"EngineLabelKey": "engine-label-value",
+			},
+		},
 	}, &api.Task{
 		Spec:      taskSpec,
 		ServiceID: "serviceid",

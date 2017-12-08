@@ -13,6 +13,7 @@ import (
 	"github.com/docker/swarmkit/api"
 	"github.com/docker/swarmkit/api/defaults"
 	"github.com/docker/swarmkit/log"
+	"github.com/docker/swarmkit/manager/constraint"
 	"github.com/docker/swarmkit/manager/orchestrator"
 	"github.com/docker/swarmkit/manager/orchestrator/restart"
 	"github.com/docker/swarmkit/manager/state"
@@ -521,6 +522,19 @@ func (u *Updater) removeOldTasks(ctx context.Context, batch *store.Batch, remove
 }
 
 func (u *Updater) isTaskDirty(t *api.Task) bool {
+	constraints, _ := constraint.Parse(u.newService.Spec.Task.Placement.Constraints)
+	u.store.Update(func(tx store.Tx) error {
+		n := store.GetNode(tx, t.NodeID)
+		if constraint.NodeMatches(constraints, n) {
+			if t.Spec.Placement == nil {
+				t.Spec.Placement = &api.Placement{}
+			}
+			t.Spec.Placement.Constraints = u.newService.Spec.Task.Placement.Constraints
+			return store.UpdateTask(tx, t)
+		}
+		return nil
+	})
+
 	return orchestrator.IsTaskDirty(u.newService, t)
 }
 
